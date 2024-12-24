@@ -51,6 +51,7 @@ bool q_insert_head(struct list_head *head, char *s)
     memset(q->value, '\0', strlen(q->value));
     strncpy(q->value, s, strlen(s));
     list_add(&q->list, head);
+    print("hello");
     return true;
 }
 
