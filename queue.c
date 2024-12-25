@@ -39,32 +39,51 @@ void q_free(struct list_head *l)
     free(l);
 }
 
-static inline bool q_insert(struct list_head *head,
-                            char *s,
-                            void (*op)(struct list_head *, struct list_head *))
+static inline element_t *new_element(const char *s)
 {
-    if (__glibc_unlikely(!head || !s))
-        return false;
-
-    element_t *me = new_node(s);
-    if (__glibc_unlikely(!me))
-        return false;
-
-    op(&me->list, head);
-    return true;
+    if (!s)
+        return NULL;
+    element_t *ne = malloc(sizeof(*ne));
+    if (!ne)
+        return NULL;
+    size_t len = strlen(s);
+    if (len > len + 1) {
+        free(ne);
+        return NULL;
+    }
+    ne->value = malloc(len + 1);
+    if (!ne->value) {
+        free(ne);
+        return NULL;
+    }
+    memcpy(ne->value, s, len);
+    ne->value[len] = '\0';
+    return ne;
 }
 
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
-    return q_insert(head, s, list_add);
+    if (!head)
+        return false;
+    element_t *ne = new_element(s);
+    if (!ne)
+        return false;
+    list_add(&ne->list, head);
+    return true;
 }
 
 
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
-    return q_insert(head, s, list_add_tail);
+    if (!head)
+        return false;
+    element_t *ne = new_element(s);
+    if (!ne)
+        return false;
+    list_add_tail(&ne->list, head);
+    return true;
 }
 
 
