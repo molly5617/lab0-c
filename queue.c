@@ -39,50 +39,32 @@ void q_free(struct list_head *l)
     free(l);
 }
 
+static inline bool q_insert(struct list_head *head,
+                            char *s,
+                            void (*op)(struct list_head *, struct list_head *))
+{
+    if (__glibc_unlikely(!head || !s))
+        return false;
 
+    element_t *me = new_node(s);
+    if (__glibc_unlikely(!me))
+        return false;
+
+    op(&me->list, head);
+    return true;
+}
 
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
-    if (!head)
-        return false;
-
-    element_t *new_node = (element_t *) malloc(sizeof(element_t));
-    if (!new_node)
-        return false;
-
-    new_node->value = (char *) malloc(strlen(s) + 1);
-    if (!new_node->value) {
-        free(new_node);
-        return false;
-    }
-
-    snprintf(new_node->value, strlen(s) + 1, "%s", s);
-    list_add(&new_node->list, head);
-    return true;
+    return q_insert(head, s, list_add);
 }
-
 
 
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
-    if (!head)
-        return false;
-
-    element_t *new_node = (element_t *) malloc(sizeof(element_t));
-    if (!new_node)
-        return false;
-
-    new_node->value = (char *) malloc(strlen(s) + 1);
-    if (!new_node->value) {
-        free(new_node);
-        return false;
-    }
-
-    snprintf(new_node->value, strlen(s) + 1, "%s", s);
-    list_add_tail(&new_node->list, head);
-    return true;
+    return q_insert(head, s, list_add_tail);
 }
 
 
