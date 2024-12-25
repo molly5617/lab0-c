@@ -3,7 +3,9 @@
 #include <string.h>
 
 
+
 #include "queue.h"
+
 
 
 /* Notice: sometimes, Cppcheck would find the potential NULL pointer bugs,
@@ -25,114 +27,111 @@ struct list_head *q_new()
 }
 
 
+
 /* Free all storage used by queue */
 void q_free(struct list_head *l)
 {
     if (!l)
         return;
-
-
     element_t *entry, *safe;
-
-
     list_for_each_entry_safe (entry, safe, l, list)
         q_release_element(entry);
-
-
     free(l);
 }
+
 
 
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
-    if (!head || !s)
+    if (!(head && s))
         return false;
-
-
-    element_t *new_elem = malloc(sizeof(element_t));  // 創建新的元素
-    if (!new_elem)
+    element_t *new_ele = malloc(sizeof(element_t));
+    if (!new_ele)
         return false;
-
-
-    new_elem->value = strdup(s);  // 分配內存並複製字符串
-    if (!new_elem->value) {
-        free(new_elem);
+    new_ele->value = (char *) malloc(strlen(s) * sizeof(char) + 1);
+    if (!new_ele->value) {
+        free(new_ele);
         return false;
     }
-
-
-    // 插入新的元素到鏈表的頭部
-    INIT_LIST_HEAD(&new_elem->list);  // 初始化新元素的鏈表指標
-    list_add(&new_elem->list, head);  // 將新元素加入到頭部
-
-
+    strncpy(new_ele->value, s, strlen(s) + 1);
+    // struct list_head *new_node = (new_ele -> list);
+    list_add(&new_ele->list, head);
     return true;
 }
+
 
 
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
-    if (!head || !s)
+    if (!(head && s))
         return false;
-    element_t *new_elem = malloc(sizeof(element_t));
-    if (!new_elem)
+    element_t *new_ele = malloc(sizeof(element_t));
+    int len = strlen(s);
+    if (!new_ele)
         return false;
-    new_elem->value = strdup(s);
-    if (!new_elem->value) {
-        free(new_elem);
+    new_ele->value = (char *) malloc(sizeof(char) * len + 1);
+    if (!new_ele->value) {
+        free(new_ele);
         return false;
     }
-    INIT_LIST_HEAD(&new_elem->list);
-    list_add_tail(&new_elem->list, head);
+    strncpy(new_ele->value, s, len + 1);
+    // struct list_head *new_node = (new_ele -> list);
+    list_add_tail(&new_ele->list, head);
     return true;
 }
+
 
 
 /* Remove an element from head of queue */
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
-    if (list_empty(head)) {
+    if (!head || list_empty(head))  // guard
         return NULL;
+    // fetch last element
+    element_t *ret = list_first_entry(head, element_t, list);
+    list_del(&ret->list);
+    if (sp) {
+        // sp is valid
+        memcpy(sp, ret->value, bufsize);
+        sp[bufsize - 1] = '\0';
     }
-    element_t *first = list_first_entry(head, element_t, list);
-    strncpy(sp, first->value, bufsize - 1);  // 最後一個字元是'\0'
-    sp[bufsize - 1] = '\0';                  // 確保最後一個字元是'\0'
-    list_del(&first->list);
-    return first;
+    return ret;
 }
+
 
 
 /* Remove an element from tail of queue */
 element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
-    if (list_empty(head)) {
+    if (!head || list_empty(head))  // guard
         return NULL;
+    // fetch last element
+    element_t *ret = list_last_entry(head, element_t, list);
+    list_del(&ret->list);
+    if (sp) {
+        // sp is valid
+        memcpy(sp, ret->value, bufsize);
+        sp[bufsize - 1] = '\0';
     }
-    element_t *last = list_last_entry(head, element_t, list);
-    strncpy(sp, last->value, bufsize - 1);
-    sp[bufsize - 1] = '\0';
-    list_del(&last->list);
-    return last;
+    return ret;
 }
+
 
 
 /* Return number of elements in queue */
 int q_size(struct list_head *head)
 {
-    if (head == NULL)
+    if (!head || list_empty(head))
         return 0;
-
-
     int len = 0;
     struct list_head *li;
-
-
     list_for_each (li, head)
         len++;
     return len;
 }
+
 
 
 /* Delete the middle node in queue */
@@ -152,34 +151,144 @@ bool q_delete_mid(struct list_head *head)
 }
 
 
+
 /* Delete all nodes that have duplicate string */
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (!head || list_empty(head))
+        return false;
+    element_t *c, *n;  // current and next element
+    bool is_dup = false;
+    list_for_each_entry_safe (c, n, head,
+                              list) {  // current node (iterator) is allowed to
+                                       // be removed from the list.
+        if (c->list.next != head &&
+            strcmp(c->value, n->value) == 0)  // duplicate string detection
+        {
+            list_del(&c->list);  // delete node
+            q_release_element(c);
+            is_dup = true;
+        } else if (is_dup) {
+            list_del(&c->list);
+            q_release_element(c);
+            is_dup = false;
+        }
+    }
+
+
+
     return true;
 }
+
 
 
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
     // https://leetcode.com/problems/swap-nodes-in-pairs/
+    if (!head)
+        return;
+    struct list_head **cur = &head->next;
+    for (; *cur != head && (*cur)->next != head; cur = &(*cur)->next->next) {
+        struct list_head *first = *cur, *second = first->next;
+        first->next = second->next;
+        second->next = first;
+        second->prev = first->prev;
+        first->prev = second;
+        *cur = second;
+    }
 }
 
 
+
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (!head)
+        return;
+    struct list_head *cur, *safe;
+    list_for_each_safe (cur, safe, head) {
+        list_move(cur, head);
+    }
+}
+
 
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    if (!head || list_empty(head))
+        return;
+    int count = 0;
+    struct list_head sub_q, *node, *safe, *tmp = head;
+    INIT_LIST_HEAD(&sub_q);
+    list_for_each_safe (node, safe, head) {
+        count++;
+        if (count == k) {
+            list_cut_position(&sub_q, tmp, node);
+            q_reverse(&sub_q);
+            list_splice_init(&sub_q, tmp);
+            count = 0;
+            tmp = safe->prev;
+        }
+    }
 }
 
 
+
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+
+
+
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+
+
+    // 使用快慢指針找到中間點，將鏈表分割為兩部分
+    struct list_head **indir = &head, *fast;
+    for (fast = head->next; fast != head && fast->next != head;
+         fast = fast->next->next) {
+        indir = &(*indir)->next;
+    }
+
+
+    LIST_HEAD(tmp);
+    list_cut_position(&tmp, *indir, head->prev);  // 分割前半部分到 tmp
+
+
+    q_sort(head, descend);  // 對前半部分排序
+    q_sort(&tmp, descend);  // 對後半部分排序
+
+
+    // 合併兩個有序部分
+    LIST_HEAD(merged);
+    while (!list_empty(head) && !list_empty(&tmp)) {
+        element_t *E1 = list_first_entry(head, element_t, list);
+        element_t *E2 = list_first_entry(&tmp, element_t, list);
+        int cmp = strcmp(E1->value, E2->value);
+        if (descend)
+            cmp = -cmp;
+        if (cmp > 0) {
+            list_move_tail(&E2->list, &merged);  // 移動 tmp 的節點到 merged
+        } else {
+            list_move_tail(&E1->list, &merged);  // 移動 head 的節點到 merged
+        }
+    }
+
+
+    // 將剩餘部分移動到 merged
+    list_splice_tail_init(head, &merged);
+    list_splice_tail_init(&tmp, &merged);
+
+
+    // 將合併結果拼接回 head
+    list_splice_tail_init(&merged, head);
+}
+
 
 
 /* Remove every node which has a node with a strictly less value anywhere to
@@ -187,8 +296,21 @@ void q_sort(struct list_head *head, bool descend) {}
 int q_ascend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    element_t *curr = list_entry(head->prev, element_t, list);
+    while (curr->list.prev != head) {
+        element_t *next = list_entry(curr->list.prev, element_t, list);
+        if (strcmp(next->value, curr->value) > 0) {
+            list_del(&next->list);
+            q_release_element(next);
+        } else {
+            curr = next;
+        }
+    }
+    return q_size(head);
 }
+
 
 
 /* Remove every node which has a node with a strictly greater value anywhere to
@@ -196,14 +318,73 @@ int q_ascend(struct list_head *head)
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    element_t *curr = list_entry(head->prev, element_t, list);
+    while (curr->list.prev != head) {
+        element_t *next = list_entry(curr->list.prev, element_t, list);
+        if (strcmp(next->value, curr->value) < 0) {
+            list_del(&next->list);
+            q_release_element(next);
+        } else {
+            curr = next;
+        }
+    }
+    return q_size(head);
 }
+
 
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
  * order */
+
+
+
 int q_merge(struct list_head *head, bool descend)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+
+
+    struct list_head result;
+    INIT_LIST_HEAD(&result);
+
+
+    queue_contex_t *c_cont, *n_cont;
+    list_for_each_entry_safe (c_cont, n_cont, head, chain) {
+        struct list_head *current = c_cont->q;
+
+
+        while (!list_empty(current)) {
+            element_t *curr_elem = list_first_entry(current, element_t, list);
+            list_del(&curr_elem->list);
+
+
+            // 插入到合併結果的正確位置
+            struct list_head *pos;
+            list_for_each (pos, &result) {
+                element_t *res_elem = list_entry(pos, element_t, list);
+                if ((descend &&
+                     strcmp(curr_elem->value, res_elem->value) > 0) ||
+                    (!descend &&
+                     strcmp(curr_elem->value, res_elem->value) < 0)) {
+                    break;
+                }
+            }
+            list_add_tail(&curr_elem->list, pos);
+        }
+
+
+        INIT_LIST_HEAD(current);  // 清空當前隊列
+    }
+
+
+    // 將結果插入到第一個隊列中
+    queue_contex_t *first_context =
+        list_first_entry(head, queue_contex_t, chain);
+    list_splice_init(&result, first_context->q);
+
+
+    return q_size(first_context->q);
 }
