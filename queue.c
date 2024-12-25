@@ -39,6 +39,18 @@ void q_free(struct list_head *l)
     }
     free(l);
 }
+
+static inline element_t *e_new(const char *s)
+{
+    size_t len = strlen(s);
+    element_t *ne = malloc(sizeof(element_t) + len + 1);
+    if (!ne)
+        return NULL;
+    ne->value = (char *) ne + sizeof(element_t);
+    strncpy(ne->value, s, len);
+    ne->value[len] = '\0';  // Make sure string is Null terminated.
+    return ne;
+}
 bool q_insert_tail(struct list_head *head, char *s)
 {
     if (!head)
