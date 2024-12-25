@@ -39,18 +39,27 @@ void q_free(struct list_head *l)
     }
     free(l);
 }
+#define MAX_STR_SIZE \
+    1024  // It stands for max string size that is used for strnlen.
 
 static inline element_t *e_new(const char *s)
 {
-    size_t len = strlen(s);
-    element_t *ne = malloc(sizeof(element_t) + len + 1);
+    element_t *ne = malloc(sizeof(element_t));
     if (!ne)
-        return NULL;
-    ne->value = (char *) ne + sizeof(element_t);
+        goto ele_Fail;
+    size_t len = strnlen(s, MAX_STR_SIZE);
+    ne->value = malloc(len + 1);
+    if (!ne->value)
+        goto val_Fail;
     strncpy(ne->value, s, len);
-    ne->value[len] = '\0';  // Make sure string is Null terminated.
+    ne->value[len] = '\0';
     return ne;
+val_Fail:
+    free(ne);
+ele_Fail:
+    return NULL;
 }
+
 bool q_insert_tail(struct list_head *head, char *s)
 {
     if (!head)
