@@ -39,78 +39,48 @@ void q_free(struct list_head *l)
     }
     free(l);
 }
-bool q_insert_head(struct list_head *head, char *s)
+bool q_insert_tail(struct list_head *head, char *s)
 {
     if (!head)
         return false;
-
-    element_t *new = malloc(sizeof(element_t));
-    if (!new)
+    element_t *ne = e_new(s);
+    if (!ne)
         return false;
-
-    INIT_LIST_HEAD(&new->list);
-    int str_size = strlen(s);
-    new->value = malloc((str_size + 1) * sizeof(char));
-
-    if (!new->value) {
-        free(new);
-        return false;
-    }
-
-    strncpy(new->value, s, str_size);
-    *(new->value + str_size) = '\0';
-    list_add(&new->list, head);
+    list_add_tail(&ne->list, head);
     return true;
 }
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
     if (!head || list_empty(head))
         return NULL;
-
-    element_t *target = list_entry(head->next, element_t, list);
-    list_del(&target->list);
-
-    if (bufsize) {
-        strncpy(sp, target->value, bufsize - 1);
-        *(sp + bufsize - 1) = '\0';
+    element_t *obj = list_first_entry(head, element_t, list);
+    list_del(&obj->list);
+    if (sp) {
+        strncpy(sp, obj->value, bufsize - 1);
+        sp[bufsize - 1] = '\0';
     }
-    return target;
+    return obj;
 }
 element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
     if (!head || list_empty(head))
         return NULL;
-
-    element_t *target = list_entry(head->prev, element_t, list);
-    list_del(&target->list);
-
-    if (bufsize) {
-        strncpy(sp, target->value, bufsize - 1);
-        *(sp + bufsize - 1) = '\0';
+    element_t *obj = list_last_entry(head, element_t, list);
+    list_del(head->prev);
+    if (sp && bufsize) {
+        strncpy(sp, obj->value, bufsize - 1);
+        sp[bufsize - 1] = '\0';
     }
-    return target;
+    return obj;
 }
-bool q_insert_tail(struct list_head *head, char *s)
+bool q_insert_head(struct list_head *head, char *s)
 {
     if (!head)
         return false;
-
-    element_t *new = malloc(sizeof(element_t));
-    if (!new)
+    element_t *ne = e_new(s);
+    if (!ne)
         return false;
-
-    INIT_LIST_HEAD(&new->list);
-    int str_size = strlen(s);
-    new->value = malloc((str_size + 1) * sizeof(char));
-
-    if (!new->value) {
-        free(new);
-        return false;
-    }
-
-    strncpy(new->value, s, str_size);
-    *(new->value + str_size) = '\0';
-    list_add_tail(&new->list, head);
+    list_add(&ne->list, head);
     return true;
 }
 
